@@ -1,5 +1,7 @@
+from init_data import status_class, status_description
 
-def make_popup(accident, status_class, status_description):
+
+def make_popup(accident):
     popup_html = f"""
                 <div>
                     <style>
@@ -15,13 +17,14 @@ def make_popup(accident, status_class, status_description):
                         .status-pending {{ background-color: #F44336; }} /* Red */
                     </style>
                 </div>
-                    <span class="status-indicator {status_class}"></span>
+                    <span class="status-indicator {status_class[accident['type']]}"></span>
                     <span class="status-description">{status_description[accident['type']]}</span>
                     <span class="accident-id">- id : {accident['id']}</span>
                 <div style="font-family: Arial; text-align: center;">
                     <h4>종류 : {accident['category']}</h4>
                     <hr style="margin: 1px;">
-                    <p><strong>날짜:</strong> {accident['date'].strftime('%Y-%m-%d')}</p>
+                    <p><strong>신고날짜:</strong> {accident['date'].strftime('%Y-%m-%d %H:%M:%S')}</p>
+                    <p><strong>신고자:</strong> {accident['user_id']}</p>
                     <p><strong>시군구:</strong> {accident['district']}</p>
                     <p><strong>설명:</strong> {accident['description']}</p>
                     <p><strong>위치:</strong> {accident['detail_location']}</p>
