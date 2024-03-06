@@ -82,7 +82,6 @@ def init_shp_data():
         EMD = gpd.read_file(
             "LSMD_ADM_SECT_UMD_pusan\LSMD_ADM_SECT_UMD_26_202309.shp", encoding="cp949"
         )
-        print("init_shp_data")
         st.session_state["yi4326"] = EMD.to_crs(epsg=4326)
     return st.session_state["yi4326"]
 
