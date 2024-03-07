@@ -18,12 +18,13 @@ from init_data import (
     busan_districts_data,
     process_types,
     data_categories,
-    data_descriptions,
-    detail_locations_base,
+    # data_descriptions,
+    # detail_locations_base
 )
 from init_data import category_icon_map, category_color_map, status_opacity_map
-from init_data import status_description, status_dict
-from init_data import get_sample_data
+from init_data import status_dict
+
+# from init_data import get_sample_data
 from util import get_average_center
 from util import get_icon_create_function
 from util import to_excel
