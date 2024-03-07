@@ -44,6 +44,9 @@ def fetch_and_format_accident_data(url):
             data = response.json()
             # JSON 데이터를 DataFrame으로 변환
             accidents_df = pd.DataFrame(data)
+            if accidents_df.empty:
+                st.error("현재 데이터가 존재하지 않습니다.")
+                return pd.DataFrame()
             # 샘플 데이터 형식에 맞추어 컬럼 변환
             formatted_df = pd.DataFrame(
                 {
@@ -70,7 +73,7 @@ def fetch_and_format_accident_data(url):
             )
             return formatted_df
         else:
-            st.error("Failed to fetch data")
+            st.error("데이터 새로고침 실패")
             return pd.DataFrame()
     except Exception as e:
         st.error(e)
