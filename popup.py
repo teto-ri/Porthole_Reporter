@@ -49,13 +49,24 @@ def make_popup(accident):
                                 border-radius: 5px;
                                 cursor: pointer;
                                 font-family: Arial;
+                                margin-right: 5px;
                             }}
                             
-                            .complete-button:hover, .hold-button:hover {{
+                            .delete-button {{
+                                padding: 10px 15px;
+                                background-color: #E34234; /* Red */
+                                color: white;
+                                border: none;
+                                border-radius: 5px;
+                                cursor: pointer;
+                                font-family: Arial;
+                            }}
+                            
+                            .complete-button:hover, .hold-button:hover, .delete-button:hover {{
                                 opacity: 0.8;
                             }}
                             
-                            .complete-button:active, .hold-button:active {{
+                            .complete-button:active, .hold-button:active, .delete-button:active {{
                                 opacity: 0.6;
                             }}
                             
@@ -72,9 +83,32 @@ def make_popup(accident):
                             <span class="button-icon">&#9888;</span> 확인
                         </button>
                         
+                        <button class="delete-button" onclick="removeGetRequest({accident['id']});  alert('삭제 처리되었습니다.');">
+                            <span class="button-icon">&#128465;</span> 삭제
+                        </button>
+                        
                         <script>
                         function sendGetRequest(id, progress) {{
                             const url = `http://waterboom.iptime.org:1101/update-location-progress?id=${{id}}&progress=${{progress}}`;
+
+                            fetch(url)
+                            .then(response => {{
+                                if (!response.ok) {{
+                                    throw new Error('Network response was not ok ' + response.statusText);
+                                }}
+                                return response.json();
+                            }})
+                            .then(data => {{
+                                console.log('Success:', data);
+                                // Handle success here
+                            }})
+                            .catch((error) => {{
+                                console.error('Error:', error);
+                                // Handle errors here
+                            }});
+                        }}
+                        function removeGetRequest(id) {{
+                            const url = `http://waterboom.iptime.org:1101/delete-location?id=${{id}}`;
 
                             fetch(url)
                             .then(response => {{
