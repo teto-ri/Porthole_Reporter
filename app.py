@@ -36,6 +36,7 @@ st.set_page_config(page_title="Porthole Reporter", layout="wide")
 ACCIDENT_DATA_URL = "http://waterboom.iptime.org:1101/get-locations"
 
 
+@st.cache_data(ttl=10, max_entries=1)
 def fetch_and_format_accident_data(url):
     try:
         response = requests.get(url)
@@ -77,6 +78,7 @@ def fetch_and_format_accident_data(url):
             return pd.DataFrame()
     except Exception as e:
         st.error(e)
+        st.cache_data.clear()
         return pd.DataFrame()
 
 
@@ -127,93 +129,100 @@ def init_district_data():
 
 # 지도 생성 함수
 def create_map(data, district_name=None, marker=False):
-    clusters = {}
-    tiles = "http://mt0.google.com/vt/lyrs=p&hl=ko&x={x}&y={y}&z={z}"
-    attr = "Google"
-    with st.spinner("Wait for it..."):
-        # 만약 특정 지역구가 선택되면 해당 지역구의 중심으로 지도 중심 설정
-        if district_name and all(
-            name in busan_districts_centers for name in district_name
-        ):
-            if district_name == ["기타"]:
-                center_location = busan_districts_centers["기타"]
-                m = folium.Map(location=center_location, zoom_start=10)
+    try:
+        clusters = {}
+        tiles = "http://mt0.google.com/vt/lyrs=p&hl=ko&x={x}&y={y}&z={z}"
+        attr = "Google"
+        with st.spinner("Wait for it..."):
+            # 만약 특정 지역구가 선택되면 해당 지역구의 중심으로 지도 중심 설정
+            if district_name and all(
+                name in busan_districts_centers for name in district_name
+            ):
+                if district_name == ["기타"]:
+                    center_location = busan_districts_centers["기타"]
+                    m = folium.Map(location=center_location, zoom_start=10)
+                else:
+                    center_location = get_average_center(district_name)
+                    m = folium.Map(location=center_location, zoom_start=13.5)
             else:
-                center_location = get_average_center(district_name)
-                m = folium.Map(location=center_location, zoom_start=13.5)
-        else:
-            m = folium.Map(location=[35.1379222, 129.05562775], zoom_start=10.5)
-
-        if marker == 1:
-            clusters = {
-                "차량 사고": MarkerCluster(
-                    icon_create_function=get_icon_create_function(0, 45)
-                ).add_to(m),
-                "도로 막힘": MarkerCluster(
-                    icon_create_function=get_icon_create_function(30, 75)
-                ).add_to(m),
-                "포트홀": MarkerCluster(
-                    icon_create_function=get_icon_create_function(220, 120)
-                ).add_to(m),
-            }
-
-        if district_name:
-            # 각 지역구에 속하는 행정동 리스트 추출
-            dong_list = []
-            for district in district_name:
-                dong_list.extend(busan_districts_data.get(district, []))
-            dong_geo = st.session_state["yi4326"][
-                st.session_state["yi4326"]["COL_ADM_SE"].isin(dong_list)
-            ]
-            for _, row in dong_geo.iterrows():
-                geojson = folium.GeoJson(
-                    row["geometry"],
-                    name=row["EMD_NM"],
-                    style_function=lambda x: {
-                        "fillColor": "green",
-                        "color": "green",
-                        "weight": 2,
-                        "fillOpacity": 0.1,
-                    },
-                )
-                geojson.add_child(folium.Tooltip(row["EMD_NM"]))
-                geojson.add_to(m)
-
-        for _, accident in data.iterrows():
-            icon_color = category_color_map[accident["category"]]
-            icon_opacity = status_opacity_map[accident["type"]]
-            icon = folium.Icon(
-                color=icon_color,
-                icon=category_icon_map[accident["category"]],
-                prefix="fa",
-            )
-
-            iframe = folium.IFrame(
-                html=make_popup(accident),
-                width=300,
-                height=250,
-            )
-            popup = folium.Popup(iframe, max_width=2650)
+                m = folium.Map(location=[35.1379222, 129.05562775], zoom_start=10.5)
 
             if marker == 1:
-                data_marker = folium.Marker(
-                    location=accident["location"],
-                    popup=popup,
-                    icon=icon,
-                    tooltip=f"{accident['category']} - {accident['date'].strftime('%Y-%m-%d')}",
-                    opacity=icon_opacity,
-                )
-                clusters[accident["category"]].add_child(data_marker)
-            else:
-                folium.Marker(
-                    location=accident["location"],
-                    popup=popup,
-                    icon=icon,
-                    tooltip=f"{accident['id']}:{accident['category']} - {accident['date'].strftime('%Y-%m-%d')}",
-                    opacity=icon_opacity,
-                ).add_to(m)
+                clusters = {
+                    "차량 사고": MarkerCluster(
+                        icon_create_function=get_icon_create_function(0, 45)
+                    ).add_to(m),
+                    "도로 막힘": MarkerCluster(
+                        icon_create_function=get_icon_create_function(30, 75)
+                    ).add_to(m),
+                    "포트홀": MarkerCluster(
+                        icon_create_function=get_icon_create_function(220, 120)
+                    ).add_to(m),
+                }
 
-        folium.LayerControl().add_to(m)
+            if district_name:
+                # 각 지역구에 속하는 행정동 리스트 추출
+                dong_list = []
+                for district in district_name:
+                    dong_list.extend(busan_districts_data.get(district, []))
+                dong_geo = st.session_state["yi4326"][
+                    st.session_state["yi4326"]["COL_ADM_SE"].isin(dong_list)
+                ]
+                for _, row in dong_geo.iterrows():
+                    geojson = folium.GeoJson(
+                        row["geometry"],
+                        name=row["EMD_NM"],
+                        style_function=lambda x: {
+                            "fillColor": "green",
+                            "color": "green",
+                            "weight": 2,
+                            "fillOpacity": 0.1,
+                        },
+                    )
+                    geojson.add_child(folium.Tooltip(row["EMD_NM"]))
+                    geojson.add_to(m)
+
+            for _, accident in data.iterrows():
+                icon_color = category_color_map[accident["category"]]
+                icon_opacity = status_opacity_map[accident["type"]]
+                icon = folium.Icon(
+                    color=icon_color,
+                    icon=category_icon_map[accident["category"]],
+                    prefix="fa",
+                )
+
+                iframe = folium.IFrame(
+                    html=make_popup(accident),
+                    width=300,
+                    height=250,
+                )
+                popup = folium.Popup(iframe, max_width=2650)
+
+                if marker == 1:
+                    data_marker = folium.Marker(
+                        location=accident["location"],
+                        popup=popup,
+                        icon=icon,
+                        tooltip=f"{accident['category']} - {accident['date'].strftime('%Y-%m-%d')}",
+                        opacity=icon_opacity,
+                    )
+                    clusters[accident["category"]].add_child(data_marker)
+                else:
+                    folium.Marker(
+                        location=accident["location"],
+                        popup=popup,
+                        icon=icon,
+                        tooltip=f"{accident['id']}:{accident['category']} - {accident['date'].strftime('%Y-%m-%d')}",
+                        opacity=icon_opacity,
+                    ).add_to(m)
+
+            folium.LayerControl().add_to(m)
+    except Exception as e:
+        if "yi4326" in str(e):
+            st.error("지도 데이터 로딩 중 오류 발생")
+            st.cache_data.clear()
+            st.rerun()
+        m = folium.Map(location=[35.1379222, 129.05562775], zoom_start=10.5)
     return m
 
 
